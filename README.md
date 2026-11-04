@@ -9,7 +9,7 @@ It simulates a small network with:
 - Ubuntu Desktop (Client)
 - Kali Linux (Attacker)
 
-The goal is to understand how firewall rules control access between machines.
+The goal is to understand how firewall rules control access between machines, and where they cannot.
 
 ---
 
@@ -37,17 +37,19 @@ The goal is to understand how firewall rules control access between machines.
 - Host a web server using Apache2
 - Allow internal users to access it
 - Simulate an attacker using Kali Linux
-- Block malicious access using firewall rules
+- Block access from the attacker using firewall rules
 
 ---
 
 ## 🔥 Firewall Rules
 
-### Allowed
-- Ubuntu Desktop → Web Server (HTTP)
-- Kali → Web Server (ICMP / ping)
+Configured on the pfSense LAN interface:
 
-### Blocked
+### Allow
+- Kali → Web Server (ICMP / ping)
+- LAN → any (default rule, covers Ubuntu Desktop → Web Server)
+
+### Block
 - Kali → Web Server (HTTP port 80)
 
 ---
@@ -60,12 +62,35 @@ http://10.10.10.129
 
 ### From Kali
 ```bash
+ping 10.10.10.129
 nmap 10.10.10.129
 ```
 
-Expected:
-- Port 80 → blocked/filtered
+Expected: port 80 blocked or filtered.
+
+Documented result:
+- Ping succeeds
 - Port 22 → open
+- Port 80 → **open**
+
+⚠️ The scan does not show the intended block.
+
+---
+
+## 🔎 Analysis
+
+Kali and the web server are in the same subnet (10.10.10.0/24) on the same virtual network. Hosts in one subnet talk to each other directly, without going through their gateway. Traffic from Kali to the web server therefore never reaches pfSense, so a rule on pfSense cannot filter it.
+
+The rule itself is configured, but this topology cannot enforce it.
+
+---
+
+## ➡️ Next Steps
+
+1. Move Kali to its own network segment, for example a second pfSense interface on a separate VMnet
+2. Create the block rule on that interface
+3. Repeat the Nmap scan and document whether port 80 is filtered
+4. Change the default pfSense admin password, as the warning in the web interface requests
 
 ---
 
@@ -96,14 +121,14 @@ Expected:
 ## 📚 What I Learned
 
 - How to configure pfSense firewall rules
-- Network segmentation basics
+- Network segmentation basics, and why it decides what a firewall can see
 - Hosting a web server
 - Simulating attacks using Kali
 - Importance of firewall rule order
+- Testing a rule instead of assuming it works
 
 ---
 
-
 ## 🧠 Conclusion
 
-This lab demonstrates how firewall rules can control access between systems and protect services from unauthorized users.
+This lab shows that a firewall only controls traffic that passes through it. The next step is to segment the network so the rule can take effect, then verify it with a new scan.
