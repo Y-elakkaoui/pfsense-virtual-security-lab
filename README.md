@@ -1,134 +1,81 @@
-# 🔐 pfsense-virtual-security-lab (pfSense + Kali + Ubuntu)
+# pfSense Firewall Lab
 
-## 📌 Overview
-This project is a simple cybersecurity lab built using VMware.
+A virtual network in VMware Workstation that tests how pfSense firewall rules control traffic between hosts, and where a firewall cannot enforce them.
 
-It simulates a small network with:
-- pfSense (Firewall)
-- Ubuntu Server (Apache Web Server)
-- Ubuntu Desktop (Client)
-- Kali Linux (Attacker)
+> **Status:** Rules configured and tested. The documented scan shows that the HTTP block does not take effect, because the attacker and the web server share a subnet. Network segmentation is the next step.
 
-The goal is to understand how firewall rules control access between machines, and where they cannot.
+> **Kurzfassung (DE):** Firewall-Lab in VMware mit pfSense, Ubuntu und Kali Linux. HTTP von Kali zum Webserver sollte blockiert werden, der Nmap-Scan zeigt Port 80 aber weiterhin offen: Beide Hosts liegen im selben Subnetz, ihr Verkehr läuft also nicht über die Firewall. Als Nächstes kommt Kali in ein eigenes Netzsegment, danach wird der Scan wiederholt.
 
----
+![pfSense firewall rules](screenshots/pfsense-rules.jpeg)
 
-## 🖥️ Lab Machines
+## Lab environment
 
-| Machine         | Role                | IP Address        |
-|-----------------|---------------------|------------------|
-| pfSense         | Firewall / Router   | 10.10.10.1       |
-| Ubuntu Server   | Web Server (Apache) | 10.10.10.129     |
-| Ubuntu Desktop  | Client              | 10.10.10.128     |
-| Kali Linux      | Attacker            | 10.10.10.4       |
+| Machine | Role | IP address |
+|---|---|---|
+| pfSense | Firewall and gateway | 10.10.10.1 |
+| Ubuntu Server | Web server (Apache2) | 10.10.10.129 |
+| Ubuntu Desktop | Client | 10.10.10.128 |
+| Kali Linux | Attacker | 10.10.10.4 |
 
----
+- **LAN:** 10.10.10.0/24
+- **VMware network:** Host-only (VMnet1)
 
-## 🌐 Network
+## Objectives
 
-- LAN: 10.10.10.0/24
-- VMware Network: Host-only (VMnet1)
-- pfSense acts as the gateway
+- Host a web server with Apache2
+- Allow internal clients to reach it
+- Simulate an attacker with Kali Linux
+- Block the attacker's HTTP access with a firewall rule
 
----
-
-## 🎯 Objectives
-
-- Host a web server using Apache2
-- Allow internal users to access it
-- Simulate an attacker using Kali Linux
-- Block access from the attacker using firewall rules
-
----
-
-## 🔥 Firewall Rules
+## Firewall rules
 
 Configured on the pfSense LAN interface:
 
-### Allow
-- Kali → Web Server (ICMP / ping)
-- LAN → any (default rule, covers Ubuntu Desktop → Web Server)
+| Action | Source | Destination | Traffic |
+|---|---|---|---|
+| Allow | Kali Linux | Web server | ICMP (ping) |
+| Block | Kali Linux | Web server | HTTP (port 80) |
+| Allow | LAN | Any | All (default rule, covers Ubuntu Desktop to web server) |
 
-### Block
-- Kali → Web Server (HTTP port 80)
+## Test results
 
----
+| Test | Source | Expected | Result |
+|---|---|---|---|
+| `http://10.10.10.129` | Ubuntu Desktop | Web server reachable | Reachable |
+| `ping 10.10.10.129` | Kali Linux | Allowed | Succeeds |
+| `nmap 10.10.10.129` | Kali Linux | Port 80 blocked or filtered | **Port 80 open**, port 22 open |
 
-## 🧪 Testing
+The scan does not show the intended block.
 
-### From Ubuntu Desktop
-http://10.10.10.129  
-✔️ Web server is accessible
+## Root cause
 
-### From Kali
-```bash
-ping 10.10.10.129
-nmap 10.10.10.129
-```
-
-Expected: port 80 blocked or filtered.
-
-Documented result:
-- Ping succeeds
-- Port 22 → open
-- Port 80 → **open**
-
-⚠️ The scan does not show the intended block.
-
----
-
-## 🔎 Analysis
-
-Kali and the web server are in the same subnet (10.10.10.0/24) on the same virtual network. Hosts in one subnet talk to each other directly, without going through their gateway. Traffic from Kali to the web server therefore never reaches pfSense, so a rule on pfSense cannot filter it.
+Kali Linux and the web server are in the same subnet (10.10.10.0/24) on the same virtual network. Hosts in one subnet communicate directly, without going through their gateway. Traffic from Kali Linux to the web server therefore never reaches pfSense, so a rule on pfSense cannot filter it.
 
 The rule itself is configured, but this topology cannot enforce it.
 
----
+## Next steps
 
-## ➡️ Next Steps
-
-1. Move Kali to its own network segment, for example a second pfSense interface on a separate VMnet
+1. Move Kali Linux to its own network segment, for example a second pfSense interface on a separate VMnet
 2. Create the block rule on that interface
 3. Repeat the Nmap scan and document whether port 80 is filtered
 4. Change the default pfSense admin password, as the warning in the web interface requests
 
----
+## Evidence
 
-## 📸 Screenshots
+### Apache web server reachable
 
-### Apache Web Server (Working)
-![Apache](screenshots/apache-working.jpeg)
+![Apache web server](screenshots/apache-working.jpeg)
 
-### pfSense Firewall Rules
-![pfSense](screenshots/pfsense-rules.jpeg)
+### Nmap scan from Kali Linux
 
-### Kali Nmap Scan
-![Kali](screenshots/kali-nmap.jpeg)
+![Nmap scan from Kali Linux](screenshots/kali-nmap.jpeg)
 
----
+## Tools
 
-## 🛠️ Tools Used
+VMware Workstation, pfSense, Ubuntu Server (Apache2), Ubuntu Desktop, Kali Linux, Nmap
 
-- VMware Workstation
-- pfSense
-- Ubuntu Server (Apache2)
-- Ubuntu Desktop
-- Kali Linux
-- Nmap
+## Key takeaways
 
----
-
-## 📚 What I Learned
-
-- How to configure pfSense firewall rules
-- Network segmentation basics, and why it decides what a firewall can see
-- Hosting a web server
-- Simulating attacks using Kali
-- Importance of firewall rule order
-- Testing a rule instead of assuming it works
-
----
-
-## 🧠 Conclusion
-
-This lab shows that a firewall only controls traffic that passes through it. The next step is to segment the network so the rule can take effect, then verify it with a new scan.
+- Network segmentation decides which traffic a firewall can see. A firewall only controls traffic that passes through it.
+- A rule has to be tested. A configured rule is not yet a working rule.
+- The order of firewall rules matters.
