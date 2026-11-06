@@ -1,0 +1,11 @@
+== Phase 1: attacker in the web server's subnet (original topology)
+PASS  Port 80 is open despite the block rule
+PASS  The firewall never saw the traffic (0 packets)
+
+== Phase 2: attacker in its own segment
+PASS  Ping is still allowed
+PASS  Port 80 is now filtered
+PASS  The block rule counted packets (got 2)
+PASS  The client still reaches the web server
+
+Result: 6 passed, 0 failed

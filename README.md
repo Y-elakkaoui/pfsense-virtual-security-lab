@@ -2,9 +2,9 @@
 
 A virtual network in VMware Workstation that tests how pfSense firewall rules control traffic between hosts, and where a firewall cannot enforce them.
 
-> **Status:** Rules configured and tested. The documented scan shows that the HTTP block does not take effect, because the attacker and the web server share a subnet. Network segmentation is the next step.
+> **Status:** Rules configured and tested. The documented scan shows that the HTTP block does not take effect, because the attacker and the web server share a subnet. An automated [concept retest](#concept-retest) with Linux confirms the cause and the fix. Repeating it on pfSense is still open.
 
-> **Kurzfassung (DE):** Firewall-Lab in VMware mit pfSense, Ubuntu und Kali Linux. HTTP von Kali zum Webserver sollte blockiert werden, der Nmap-Scan zeigt Port 80 aber weiterhin offen: Beide Hosts liegen im selben Subnetz, ihr Verkehr läuft also nicht über die Firewall. Als Nächstes kommt Kali in ein eigenes Netzsegment, danach wird der Scan wiederholt.
+> **Kurzfassung (DE):** Firewall-Lab in VMware mit pfSense, Ubuntu und Kali Linux. HTTP von Kali zum Webserver sollte blockiert werden, der Nmap-Scan zeigt Port 80 aber weiterhin offen: Beide Hosts liegen im selben Subnetz, ihr Verkehr läuft also nicht über die Firewall. Ein automatisierter Nachtest mit Linux bestätigt Ursache und Lösung. Die Wiederholung mit pfSense steht noch aus.
 
 ![pfSense firewall rules](screenshots/pfsense-rules.jpeg)
 
@@ -52,6 +52,19 @@ The scan does not show the intended block.
 Kali Linux and the web server are in the same subnet (10.10.10.0/24) on the same virtual network. Hosts in one subnet communicate directly, without going through their gateway. Traffic from Kali Linux to the web server therefore never reaches pfSense, so a rule on pfSense cannot filter it.
 
 The rule itself is configured, but this topology cannot enforce it.
+
+## Concept retest
+
+An automated retest on GitHub Actions rebuilds the addressing with Linux network namespaces. **nftables stands in for pfSense**, so this checks the network design, not the pfSense rule itself.
+
+| Check | Attacker in the same subnet | Attacker in its own segment |
+|---|---|---|
+| Nmap, port 80 from the attacker | Open | Filtered |
+| Packets counted by the block rule | 0 | 2 |
+| Ping from the attacker | Not tested | Allowed |
+| HTTP from the client | Not tested | Reachable |
+
+All 6 checks passed. See the [results](retest/evidence/results.txt), [evidence](retest/evidence/) and [workflow](.github/workflows/retest.yml). The retest was built and run with AI assistance (Claude).
 
 ## Next steps
 

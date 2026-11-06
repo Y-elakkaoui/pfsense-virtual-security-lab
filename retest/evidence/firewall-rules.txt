@@ -1,0 +1,6 @@
+table inet lab {
+	chain forward {
+		type filter hook forward priority filter; policy accept;
+		ip saddr 10.10.20.4 ip daddr 10.10.10.129 tcp dport 80 counter packets 2 bytes 88 drop
+	}
+}

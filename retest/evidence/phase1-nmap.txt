@@ -1,0 +1,9 @@
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-11-06 16:07 UTC
+Nmap scan report for 10.10.10.129
+Host is up (0.000060s latency).
+
+PORT   STATE SERVICE
+80/tcp open  http
+MAC Address: 6A:94:2C:84:14:1D (Unknown)
+
+Nmap done: 1 IP address (1 host up) scanned in 13.23 seconds
